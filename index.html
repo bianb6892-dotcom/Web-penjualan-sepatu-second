@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShoeSecond - Interactive Pre-Loved Sneaker Marketplace</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50:  '#fdf2f4',
+                            100: '#fce7ea',
+                            200: '#f9d0d6',
+                            300: '#f4a8b3',
+                            400: '#ec7589',
+                            500: '#a83248',
+                            600: '#8b1e3f',
+                            700: '#6d1731',
+                            800: '#4f1023',
+                            900: '#2e0914',
+                        },
+                        dark: '#1a0a10'
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fafafa;
+            color: #18181b;
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #8b1e3f; }
+
+        .tab-active {
+            color: #8b1e3f;
+            border-bottom: 2px solid #8b1e3f;
+            font-weight: 600;
+        }
+        .nav-link-active {
+            color: #8b1e3f;
+            font-weight: 600;
+        }
+
+        /* ==================== HERO SNEAKER DISPLAY (STATIS) ==================== */
+        .sneaker-stage {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Container gambar sepatu */
+        .sneaker-img-wrap {
+            width: 80%;
+            max-width: 400px;
+            position: relative;
+            z-index: 2;
+            /* Drop shadow lembut mengikuti siluet */
+            filter: drop-shadow(0 20px 25px rgba(43, 5, 20, 0.28));
+        }
+
+        /* Gambar sepatu */
+        .sneaker-img-wrap img {
+            width: 100%;
+            height: auto;
+            display: block;
+            /* Hapus background putih pada gambar */
+            mix-blend-mode: darken;
+            /* Perjelas warna & kontras */
+            filter: contrast(1.08) saturate(1.05);
+            pointer-events: none;
+            -webkit-user-drag: none;
+            user-select: none;
+        }
+
+        /* Shadow oval di bawah sepatu */
+        .sneaker-shadow {
+            position: absolute;
+            bottom: 14%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50%;
+            height: 20px;
+            background: radial-gradient(ellipse at center, rgba(43, 5, 20, 0.30) 0%, rgba(0,0,0,0) 70%);
+            border-radius: 50%;
+            filter: blur(7px);
+            z-index: 1;
+        }
+
+        /* Modal */
+        @keyframes pop {
+            from { transform: scale(0.95); opacity: 0; }
+            to   { transform: scale(1);    opacity: 1; }
+        }
+        .animate-pop { animation: pop 0.25s ease; }
+        .modal-visible { display: flex !important; }
+
+        /* Line clamp */
+        .line-clamp-1 {
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between antialiased selection:bg-brand-100 selection:text-brand-700">
+
+    <!-- ===================== NAVBAR ===================== -->
+    <header class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="switchPage('katalog')">
+                    <div class="p-2 bg-brand-50 rounded-xl text-brand-600">
+                        <i data-lucide="footprints" class="w-6 h-6"></i>
+                    </div>
+                    <span class="text-xl font-extrabold tracking-tight text-gray-900">
+                        Shoe<span class="text-brand-600">Second</span>
+                    </span>
+                </div>
+
+                <nav class="hidden md:flex items-center space-x-8 text-sm font-medium text-gray-600">
+                    <button onclick="switchPage('katalog')" id="nav-katalog" class="hover:text-brand-600 transition nav-link-active flex items-center gap-1.5 py-2">
+                        <i data-lucide="store" class="w-4 h-4"></i><span>Katalog</span>
+                    </button>
+                    <button onclick="switchPage('upload')" id="nav-upload" class="hover:text-brand-600 transition flex items-center gap-1.5 py-2">
+                        <i data-lucide="upload-cloud" class="w-4 h-4"></i><span>Upload</span>
+                    </button>
+                    <button onclick="switchPage('gallery')" id="nav-gallery" class="hover:text-brand-600 transition flex items-center gap-1.5 py-2">
+                        <i data-lucide="images" class="w-4 h-4"></i><span>Gallery</span>
+                    </button>
+                </nav>
+
+                <div class="hidden md:flex items-center space-x-4">
+                    <button onclick="switchPage('upload')" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition shadow-sm hover:shadow flex items-center gap-2">
+                        <i data-lucide="tag" class="w-4 h-4"></i><span>Jual Sepatu</span>
+                    </button>
+                </div>
+
+                <div class="md:hidden flex items-center">
+                    <button onclick="toggleMobileMenu()" class="p-2 rounded-lg text-gray-600 hover:bg-gray-100 focus:outline-none">
+                        <i data-lucide="menu" class="w-6 h-6"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="mobile-menu" class="hidden md:hidden border-b border-gray-100 bg-white px-4 pt-2 pb-4 space-y-1 text-sm font-medium text-gray-600">
+            <button onclick="switchPage('katalog'); toggleMobileMenu();" class="block w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 hover:text-brand-600">Katalog</button>
+            <button onclick="switchPage('upload'); toggleMobileMenu();" class="block w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 hover:text-brand-600">Upload</button>
+            <button onclick="switchPage('gallery'); toggleMobileMenu();" class="block w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 hover:text-brand-600">Gallery</button>
+        </div>
+    </header>
+
+    <div id="toast-container" class="fixed top-20 right-5 z-[60] flex flex-col gap-2 pointer-events-none"></div>
+
+    <main class="flex-grow">
+
+        <!-- ===================== KATALOG PAGE ===================== -->
+        <section id="page-katalog" class="page-content">
+            <!-- HERO -->
+            <div class="bg-gradient-to-b from-brand-50 via-stone-50 to-white border-b border-gray-200/60 py-10 lg:py-16 relative overflow-hidden">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                    <div class="grid lg:grid-cols-12 gap-8 items-center">
+
+                        <div class="lg:col-span-6 space-y-6 text-center lg:text-left">
+                            <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-brand-50 text-brand-600 border border-brand-100 shadow-sm">
+                                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                                Platform Pre-loved Kurasi Terpercaya
+                            </span>
+                            <h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight tracking-tight">
+                                Temukan <span class="text-brand-600">Sepatu Second</span> Berkualitas
+                            </h1>
+                            <p class="text-gray-600 text-base sm:text-lg max-w-xl mx-auto lg:mx-0">
+                                Beli & jual sepatu terkurasi. 100% Original, kondisi transparan, & siap melangkah lebih jauh.
+                            </p>
+                            <div class="flex flex-wrap gap-3 justify-center lg:justify-start pt-2">
+                                <a href="#katalog-grid" class="bg-brand-600 hover:bg-brand-700 text-white font-medium px-6 py-3 rounded-xl transition shadow-md hover:shadow-lg flex items-center gap-2">
+                                    <span>Lihat Koleksi</span>
+                                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                                </a>
+                                <button onclick="switchPage('upload')" class="bg-white hover:bg-gray-50 text-gray-800 border border-gray-200 font-medium px-6 py-3 rounded-xl transition flex items-center gap-2 shadow-sm">
+                                    <i data-lucide="plus-circle" class="w-4 h-4 text-brand-600"></i>
+                                    <span>Mulai Jualan</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- HERO RIGHT: SNEAKER STATIS -->
+                        <div class="lg:col-span-6 flex flex-col items-center justify-center relative">
+                            <div class="w-full max-w-md h-[340px] sm:h-[420px] relative rounded-3xl bg-gradient-to-br from-brand-100/70 via-brand-50/40 to-white border border-brand-100 shadow-2xl overflow-hidden">
+
+                                <div class="sneaker-stage">
+                                    <div class="sneaker-shadow"></div>
+
+                                    <div class="sneaker-img-wrap">
+                                        <!-- ========== GANTI src DI BAWAH DENGAN GAMBAR ANDA ========== -->
+                                        <img id="sneaker-img"
+                                             src="images__2_-removebg-preview.png"
+                                             alt="Converse Chuck Taylor"
+                                             crossorigin="anonymous"
+                                             onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1607522370275-f14206abe5d3?auto=format&fit=crop&w=800&q=80';">
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEARCH & FILTER -->
+            <div id="katalog-grid" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">Katalog Sepatu Pilihan</h2>
+                        <p class="text-sm text-gray-500">Semua sepatu telah melalui verifikasi kelayakan</p>
+                    </div>
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                        <div class="relative min-w-[280px]">
+                            <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input type="text" id="search-input" onkeyup="filterProducts()" placeholder="Cari nama, brand, atau deskripsi..."
+                                   class="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent shadow-sm">
+                        </div>
+                        <select id="condition-filter" onchange="filterProducts()" class="bg-white border border-gray-200 rounded-xl text-sm px-3.5 py-2.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-600 shadow-sm">
+                            <option value="all">Semua Kondisi</option>
+                            <option value="Like New (95-99%)">Like New (95-99%)</option>
+                            <option value="Sangat Baik (85-94%)">Sangat Baik (85-94%)</option>
+                            <option value="Pemakaian Wajar (70-84%)">Pemakaian Wajar (70-84%)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="products-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+            </div>
+        </section>
+
+        <!-- ===================== UPLOAD PAGE ===================== -->
+        <section id="page-upload" class="page-content hidden">
+            <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+                <div class="mb-6">
+                    <h1 class="text-2xl font-bold text-gray-900">Upload</h1>
+                    <p class="text-sm text-gray-500">Pilih tipe upload: produk sepatu atau foto dokumentasi gallery.</p>
+                </div>
+
+                <div class="flex border-b border-gray-200 mb-6 space-x-8">
+                    <button id="tab-upload-barang" onclick="switchUploadTab('barang')" class="py-3 text-sm font-medium tab-active flex items-center gap-2 transition">
+                        <i data-lucide="tag" class="w-4 h-4"></i>
+                        <span>Upload Barang</span>
+                    </button>
+                    <button id="tab-upload-gallery" onclick="switchUploadTab('gallery')" class="py-3 text-sm font-medium text-gray-500 hover:text-gray-700 flex items-center gap-2 transition">
+                        <i data-lucide="camera" class="w-4 h-4"></i>
+                        <span>Upload Gallery</span>
+                    </button>
+                </div>
+
+                <!-- TAB: BARANG -->
+                <div id="upload-barang-content">
+                    <div class="bg-white rounded-2xl border border-gray-200/80 p-6 md:p-8 shadow-sm">
+                        <form id="upload-product-form" onsubmit="handleProductUpload(event)" class="space-y-6">
+                            <input type="hidden" id="prod-edit-id" value="">
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Nama Sepatu <span class="text-brand-600">*</span></label>
+                                <input type="text" id="prod-name" required placeholder="Contoh: Converse Chuck 70s High Red"
+                                       class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent">
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Harga (Rp) <span class="text-brand-600">*</span></label>
+                                    <div class="relative">
+                                        <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">Rp</span>
+                                        <input type="number" id="prod-price" required placeholder="480000"
+                                               class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Kondisi Barang <span class="text-brand-600">*</span></label>
+                                    <select id="prod-condition" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-600">
+                                        <option value="" disabled selected>-- Pilih Kondisi --</option>
+                                        <option value="Like New (95-99%)">Like New (95-99%)</option>
+                                        <option value="Sangat Baik (85-94%)">Sangat Baik (85-94%)</option>
+                                        <option value="Pemakaian Wajar (70-84%)">Pemakaian Wajar (70-84%)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center justify-between">
+                                    <span>Deskripsi Lengkap</span>
+                                    <span class="text-xs text-gray-400">(opsional)</span>
+                                </label>
+                                <textarea id="prod-desc" rows="3" placeholder="Sebutkan ukuran (misal: Size 42), kelengkapan box..."
+                                          class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"></textarea>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Foto Sepatu <span class="text-brand-600">*</span></label>
+                                <div class="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-brand-600 transition bg-gray-50/50 relative cursor-pointer group">
+                                    <input type="file" id="prod-image-file" accept="image/*" onchange="previewProductImage(event)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                                    <div id="prod-image-placeholder" class="space-y-2">
+                                        <div class="mx-auto w-10 h-10 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center group-hover:scale-110 transition">
+                                            <i data-lucide="image-plus" class="w-5 h-5"></i>
+                                        </div>
+                                        <div class="text-sm text-gray-600">
+                                            <span class="font-medium text-brand-600">Pilih foto</span> atau seret file ke sini
+                                        </div>
+                                        <p class="text-xs text-gray-400">PNG, JPG, WEBP hingga 5MB</p>
+                                    </div>
+                                    <div id="prod-image-preview-container" class="hidden relative z-20 flex flex-col items-center">
+                                        <img id="prod-image-preview" src="" alt="Preview" class="h-40 object-cover rounded-lg border shadow-sm">
+                                        <p class="text-xs text-gray-500 mt-2" id="prod-image-name"></p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="pt-2 flex gap-3">
+                                <button type="button" id="prod-cancel-edit" onclick="cancelEditProduct()" class="hidden flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 rounded-xl transition">
+                                    Batal Edit
+                                </button>
+                                <button type="submit" id="prod-submit-btn" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-medium py-3 rounded-xl transition shadow-sm hover:shadow flex items-center justify-center gap-2">
+                                    <i data-lucide="check-circle" class="w-5 h-5"></i>
+                                    <span id="prod-submit-label">Publikasikan Sepatu</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- TAB: GALLERY -->
+                <div id="upload-gallery-content" class="hidden">
+                    <div class="bg-white rounded-2xl border border-gray-200/80 p-6 md:p-8 shadow-sm">
+                        <form id="upload-gallery-form" onsubmit="handleGalleryUpload(event)" class="space-y-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Judul Momen / Foto <span class="text-brand-600">*</span></label>
+                                <input type="text" id="gal-title" required placeholder="Contoh: Suasana Restock Sneakers 2026"
+                                       class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5 flex items-center justify-between">
+                                    <span>Deskripsi Singkat</span>
+                                    <span class="text-xs text-gray-400">(opsional)</span>
+                                </label>
+                                <textarea id="gal-desc" rows="3" placeholder="Keterangan foto atau dokumentasi..."
+                                          class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"></textarea>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Foto Dokumentasi <span class="text-brand-600">*</span></label>
+                                <div class="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-brand-600 transition bg-gray-50/50 relative cursor-pointer group">
+                                    <input type="file" id="gal-image-file" accept="image/*" onchange="previewGalleryImage(event)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" required>
+                                    <div id="gal-image-placeholder" class="space-y-2">
+                                        <div class="mx-auto w-10 h-10 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center group-hover:scale-110 transition">
+                                            <i data-lucide="upload" class="w-5 h-5"></i>
+                                        </div>
+                                        <div class="text-sm text-gray-600">
+                                            <span class="font-medium text-brand-600">Pilih foto</span> galeri
+                                        </div>
+                                        <p class="text-xs text-gray-400">PNG, JPG, WEBP</p>
+                                    </div>
+                                    <div id="gal-image-preview-container" class="hidden relative z-20 flex flex-col items-center">
+                                        <img id="gal-image-preview" src="" alt="Preview" class="h-40 object-cover rounded-lg border shadow-sm">
+                                        <p class="text-xs text-gray-500 mt-2" id="gal-image-name"></p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="pt-2">
+                                <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-3 rounded-xl transition shadow-sm hover:shadow flex items-center justify-center gap-2">
+                                    <i data-lucide="send" class="w-5 h-5"></i>
+                                    <span>Upload ke Gallery</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ===================== GALLERY PAGE ===================== -->
+        <section id="page-gallery" class="page-content hidden">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">Gallery Umum</h1>
+                        <p class="text-sm text-gray-500">Dokumentasi restock, event, & aktivitas komunitas ShoeSecond</p>
+                    </div>
+                    <button onclick="switchPage('upload'); switchUploadTab('gallery');" class="self-start md:self-auto bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition flex items-center gap-2 shadow-sm">
+                        <i data-lucide="camera" class="w-4 h-4"></i>
+                        <span>Tambah Foto Gallery</span>
+                    </button>
+                </div>
+
+                <div id="gallery-umum-content" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-dark text-gray-400 text-sm py-10 border-t border-brand-900 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                <div class="flex items-center space-x-3">
+                    <div class="p-2 bg-brand-900 text-brand-300 rounded-xl">
+                        <i data-lucide="footprints" class="w-5 h-5"></i>
+                    </div>
+                    <span class="text-lg font-bold text-white tracking-tight">ShoeSecond</span>
+                </div>
+                <p class="text-center text-xs sm:text-sm text-gray-500 flex items-center gap-1">
+                    © 2026 ShoeSecond. Dibuat dengan
+                    <i data-lucide="heart" class="w-4 h-4 text-brand-500 inline fill-brand-500"></i>
+                    untuk pecinta sepatu second.
+                </p>
+                <div class="flex items-center space-x-4 text-gray-400">
+                    <a href="#" class="hover:text-white transition"><i data-lucide="instagram" class="w-5 h-5"></i></a>
+                    <a href="#" class="hover:text-white transition"><i data-lucide="message-circle" class="w-5 h-5"></i></a>
+                    <a href="#" class="hover:text-white transition"><i data-lucide="shield-check" class="w-5 h-5"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ===================== MODAL PRODUK ===================== -->
+    <div id="product-modal" class="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-pop relative">
+            <button onclick="closeProductModal()" class="absolute top-3 right-3 p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition z-10">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+
+            <img id="modal-img" src="" alt="" class="w-full h-56 object-cover rounded-t-2xl">
+            <div class="p-6">
+                <h3 id="modal-name" class="text-lg font-bold text-gray-900 mb-2"></h3>
+                <div class="flex items-center gap-2 mb-3">
+                    <span id="modal-condition" class="inline-block bg-brand-50 text-brand-700 text-xs font-semibold px-2.5 py-1 rounded-lg"></span>
+                </div>
+                <p id="modal-price" class="text-2xl font-bold text-brand-600 mb-3"></p>
+                <p id="modal-desc" class="text-sm text-gray-600 leading-relaxed mb-6"></p>
+
+                <div class="flex gap-2">
+                    <button onclick="editProduct()" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 rounded-xl transition flex items-center justify-center gap-2 text-sm">
+                        <i data-lucide="pencil" class="w-4 h-4"></i>
+                        <span>Edit</span>
+                    </button>
+                    <button onclick="deleteProduct()" class="flex-1 bg-red-50 hover:bg-red-100 text-red-700 font-medium py-2.5 rounded-xl transition flex items-center justify-center gap-2 text-sm border border-red-100">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        <span>Hapus</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== MODAL GALLERY ===================== -->
+    <div id="gallery-modal" class="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-pop relative">
+            <button onclick="closeGalleryModal()" class="absolute top-3 right-3 p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition z-10">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+
+            <img id="modal-gal-img" src="" alt="" class="w-full h-56 object-cover rounded-t-2xl">
+            <div class="p-6">
+                <h3 id="modal-gal-title" class="text-lg font-bold text-gray-900 mb-2"></h3>
+                <p id="modal-gal-desc" class="text-sm text-gray-600 leading-relaxed mb-6"></p>
+
+                <button onclick="deleteGalleryItem()" class="w-full bg-red-50 hover:bg-red-100 text-red-700 font-medium py-2.5 rounded-xl transition flex items-center justify-center gap-2 text-sm border border-red-100">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    <span>Hapus Foto</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- =================================================================
+         JAVASCRIPT APPLICATION
+    ================================================================== -->
+    <script>
+        /* ===================== STORAGE ===================== */
+        const STORAGE_KEY_PRODUCTS = 'shoesecond_products_v1';
+        const STORAGE_KEY_GALLERY  = 'shoesecond_gallery_v1';
+
+        let products    = loadFromStorage(STORAGE_KEY_PRODUCTS, getDefaultProducts());
+        let galleryUmum = loadFromStorage(STORAGE_KEY_GALLERY,  getDefaultGallery());
+
+        let tempProdImg = '';
+        let tempGalImg  = '';
+        let currentModalProductId = null;
+        let currentModalGalleryId = null;
+
+        function loadFromStorage(key, fallback) {
+            try {
+                const raw = localStorage.getItem(key);
+                return raw ? JSON.parse(raw) : fallback;
+            } catch (e) { return fallback; }
+        }
+        function saveToStorage(key, data) {
+            try { localStorage.setItem(key, JSON.stringify(data)); }
+            catch (e) { console.warn('Save failed:', e); }
+        }
+
+        function getDefaultProducts() {
+            return [
+                {
+                    id: 'prod-1',
+                    name: 'Converse Chuck 70s High Red',
+                    price: 480000,
+                    condition: 'Sangat Baik (85-94%)',
+                    desc: 'Size 42. Kanvas tebal masih kokoh, sol karet utuh, warna merah klasik.',
+                    image: 'https://images.unsplash.com/photo-1607522370275-f14206abe5d3?auto=format&fit=crop&w=600&q=80'
+                },
+                {
+                    id: 'prod-2',
+                    name: 'Nike Air Jordan 1 High OG',
+                    price: 1850000,
+                    condition: 'Like New (95-99%)',
+                    desc: 'Size 42.5 / 9 US. Mulus lengkap dengan box original dan extra laces.',
+                    image: 'https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?auto=format&fit=crop&w=600&q=80'
+                },
+                {
+                    id: 'prod-3',
+                    name: 'Adidas Samba OG White Black',
+                    price: 920000,
+                    condition: 'Sangat Baik (85-94%)',
+                    desc: 'Size 41. Tapak mulus, bahan leather masih terawat tanpa minus robek.',
+                    image: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?auto=format&fit=crop&w=600&q=80'
+                },
+                {
+                    id: 'prod-4',
+                    name: 'New Balance 2002R Protection Pack',
+                    price: 1450000,
+                    condition: 'Like New (95-99%)',
+                    desc: 'Size 43. Pemakaian beberapa kali, insole tebal dan bersih.',
+                    image: 'https://images.unsplash.com/photo-1539185441755-769473a23570?auto=format&fit=crop&w=600&q=80'
+                }
+            ];
+        }
+
+        function getDefaultGallery() {
+            return [
+                {
+                    id: 'gal-1',
+                    title: 'Dokumentasi Restock September 2026',
+                    desc: 'Kedatangan 50+ pasang sepatu vintage terkurasi siap cuci.',
+                    image: 'https://images.unsplash.com/photo-1556906781-9a412961c28c?auto=format&fit=crop&w=600&q=80'
+                },
+                {
+                    id: 'gal-2',
+                    title: 'Corner Display Offline Pop-Up',
+                    desc: 'Suasana kumpul komunitas dan display sepatu pilihan.',
+                    image: 'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?auto=format&fit=crop&w=600&q=80'
+                }
+            ];
+        }
+
+        /* ===================== INIT ===================== */
+        window.addEventListener('DOMContentLoaded', () => {
+            renderProducts(products);
+            renderGallery();
+            lucide.createIcons();
+        });
+
+        /* ===================== NAVIGASI ===================== */
+        function switchPage(pageId) {
+            document.querySelectorAll('.page-content').forEach(s => s.classList.add('hidden'));
+            const targetPage = document.getElementById(`page-${pageId}`);
+            if (targetPage) targetPage.classList.remove('hidden');
+
+            ['katalog', 'upload', 'gallery'].forEach(id => {
+                const navElem = document.getElementById(`nav-${id}`);
+                if (navElem) navElem.classList.toggle('nav-link-active', id === pageId);
+            });
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            lucide.createIcons();
+        }
+
+        function toggleMobileMenu() {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        }
+
+        /* ===================== TAB UPLOAD ===================== */
+        function switchUploadTab(type) {
+            const tabBarang  = document.getElementById('tab-upload-barang');
+            const tabGallery = document.getElementById('tab-upload-gallery');
+            const contentBarang  = document.getElementById('upload-barang-content');
+            const contentGallery = document.getElementById('upload-gallery-content');
+
+            if (type === 'barang') {
+                tabBarang.classList.add('tab-active');
+                tabBarang.classList.remove('text-gray-500');
+                tabGallery.classList.remove('tab-active');
+                tabGallery.classList.add('text-gray-500');
+                contentBarang.classList.remove('hidden');
+                contentGallery.classList.add('hidden');
+            } else {
+                tabGallery.classList.add('tab-active');
+                tabGallery.classList.remove('text-gray-500');
+                tabBarang.classList.remove('tab-active');
+                tabBarang.classList.add('text-gray-500');
+                contentGallery.classList.remove('hidden');
+                contentBarang.classList.add('hidden');
+            }
+            lucide.createIcons();
+        }
+
+        /* ===================== RENDER PRODUK ===================== */
+        function renderProducts(productList) {
+            const container = document.getElementById('products-container');
+            if (!container) return;
+
+            if (productList.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full py-16 text-center text-gray-500">
+                        <i data-lucide="package-search" class="w-12 h-12 mx-auto text-gray-300 mb-3"></i>
+                        <p class="font-medium">Belum ada sepatu yang cocok.</p>
+                    </div>`;
+                lucide.createIcons();
+                return;
+            }
+
+            container.innerHTML = productList.map(item => `
+                <div onclick="showDetailModal('${item.id}')" class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition duration-300 flex flex-col group cursor-pointer">
+                    <div class="relative aspect-square overflow-hidden bg-gray-50">
+                        <img src="${item.image}" alt="${item.name}"
+                             class="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                             onerror="this.src='https://placehold.co/400x400/f3f4f6/374151?text=ShoeSecond'">
+                        <span class="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-lg text-xs font-semibold text-gray-800 border border-gray-200/60 shadow-sm">
+                            ${item.condition}
+                        </span>
+                    </div>
+                    <div class="p-4 flex-grow flex flex-col justify-between">
+                        <div>
+                            <h3 class="font-semibold text-gray-900 group-hover:text-brand-600 transition line-clamp-1">${item.name}</h3>
+                            <p class="text-xs text-gray-500 mt-1 line-clamp-2">${item.desc || 'Kondisi terawat & original.'}</p>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+                            <div>
+                                <span class="text-[11px] text-gray-400 block font-medium">Harga</span>
+                                <span class="text-base font-bold text-brand-600">Rp ${Number(item.price).toLocaleString('id-ID')}</span>
+                            </div>
+                            <div class="p-2 bg-gray-50 group-hover:bg-brand-50 text-gray-600 group-hover:text-brand-600 rounded-xl transition">
+                                <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        function filterProducts() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const condition = document.getElementById('condition-filter').value;
+
+            const filtered = products.filter(p => {
+                const matchesSearch = p.name.toLowerCase().includes(query) || (p.desc || '').toLowerCase().includes(query);
+                const matchesCondition = condition === 'all' || p.condition === condition;
+                return matchesSearch && matchesCondition;
+            });
+            renderProducts(filtered);
+        }
+
+        /* ===================== MODAL PRODUK ===================== */
+        function showDetailModal(id) {
+            const p = products.find(x => x.id === id);
+            if (!p) return;
+
+            currentModalProductId = id;
+            document.getElementById('modal-img').src = p.image;
+            document.getElementById('modal-name').textContent = p.name;
+            document.getElementById('modal-condition').textContent = p.condition;
+            document.getElementById('modal-price').textContent = 'Rp ' + Number(p.price).toLocaleString('id-ID');
+            document.getElementById('modal-desc').textContent = p.desc || 'Tidak ada deskripsi.';
+
+            document.getElementById('product-modal').classList.add('modal-visible');
+            lucide.createIcons();
+        }
+        function closeProductModal() {
+            document.getElementById('product-modal').classList.remove('modal-visible');
+            currentModalProductId = null;
+        }
+
+        /* ===================== EDIT / HAPUS PRODUK ===================== */
+        function editProduct() {
+            const p = products.find(x => x.id === currentModalProductId);
+            if (!p) return;
+
+            closeProductModal();
+            switchPage('upload');
+            switchUploadTab('barang');
+
+            document.getElementById('prod-edit-id').value = p.id;
+            document.getElementById('prod-name').value = p.name;
+            document.getElementById('prod-price').value = p.price;
+            document.getElementById('prod-condition').value = p.condition;
+            document.getElementById('prod-desc').value = p.desc || '';
+
+            tempProdImg = p.image;
+            document.getElementById('prod-image-preview').src = p.image;
+            document.getElementById('prod-image-name').textContent = 'Foto lama (biarkan jika tidak ganti)';
+            document.getElementById('prod-image-placeholder').classList.add('hidden');
+            document.getElementById('prod-image-preview-container').classList.remove('hidden');
+
+            document.getElementById('prod-submit-label').textContent = 'Simpan Perubahan';
+            document.getElementById('prod-cancel-edit').classList.remove('hidden');
+        }
+
+        function cancelEditProduct() {
+            document.getElementById('upload-product-form').reset();
+            document.getElementById('prod-edit-id').value = '';
+            document.getElementById('prod-image-placeholder').classList.remove('hidden');
+            document.getElementById('prod-image-preview-container').classList.add('hidden');
+            document.getElementById('prod-submit-label').textContent = 'Publikasikan Sepatu';
+            document.getElementById('prod-cancel-edit').classList.add('hidden');
+            tempProdImg = '';
+        }
+
+        function deleteProduct() {
+            if (!currentModalProductId) return;
+            if (!confirm('Yakin ingin menghapus produk ini?')) return;
+
+            products = products.filter(p => p.id !== currentModalProductId);
+            saveToStorage(STORAGE_KEY_PRODUCTS, products);
+            renderProducts(products);
+            closeProductModal();
+            showToast('Produk berhasil dihapus.');
+        }
+
+        /* ===================== UPLOAD / EDIT PRODUK ===================== */
+        function handleProductUpload(e) {
+            e.preventDefault();
+            const editId = document.getElementById('prod-edit-id').value;
+            const name = document.getElementById('prod-name').value;
+            const price = document.getElementById('prod-price').value;
+            const condition = document.getElementById('prod-condition').value;
+            const desc = document.getElementById('prod-desc').value;
+
+            if (editId) {
+                const idx = products.findIndex(p => p.id === editId);
+                if (idx !== -1) {
+                    products[idx] = {
+                        ...products[idx],
+                        name, price: parseInt(price), condition, desc,
+                        image: tempProdImg || products[idx].image
+                    };
+                }
+                saveToStorage(STORAGE_KEY_PRODUCTS, products);
+                renderProducts(products);
+                cancelEditProduct();
+                showToast('Produk berhasil diperbarui!');
+                switchPage('katalog');
+            } else {
+                const newProduct = {
+                    id: 'prod-' + Date.now(),
+                    name, price: parseInt(price), condition, desc,
+                    image: tempProdImg || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80'
+                };
+                products.unshift(newProduct);
+                saveToStorage(STORAGE_KEY_PRODUCTS, products);
+                renderProducts(products);
+
+                document.getElementById('upload-product-form').reset();
+                document.getElementById('prod-image-placeholder').classList.remove('hidden');
+                document.getElementById('prod-image-preview-container').classList.add('hidden');
+                tempProdImg = '';
+
+                showToast('Sepatu berhasil dipublikasikan!');
+                switchPage('katalog');
+            }
+        }
+
+        function previewProductImage(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    tempProdImg = event.target.result;
+                    document.getElementById('prod-image-preview').src = tempProdImg;
+                    document.getElementById('prod-image-name').textContent = file.name;
+                    document.getElementById('prod-image-placeholder').classList.add('hidden');
+                    document.getElementById('prod-image-preview-container').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        /* ===================== GALLERY ===================== */
+        function renderGallery() {
+            const containerUmum = document.getElementById('gallery-umum-content');
+            if (!containerUmum) return;
+
+            if (galleryUmum.length === 0) {
+                containerUmum.innerHTML = `
+                    <div class="col-span-full py-16 text-center text-gray-500">
+                        <i data-lucide="image-off" class="w-12 h-12 mx-auto text-gray-300 mb-3"></i>
+                        <p class="font-medium">Galeri masih kosong. Upload foto dokumentasi terlebih dahulu.</p>
+                    </div>`;
+                lucide.createIcons();
+                return;
+            }
+
+            containerUmum.innerHTML = galleryUmum.map(item => `
+                <div onclick="showGalleryModal('${item.id}')" class="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm group cursor-pointer hover:shadow-md transition">
+                    <div class="aspect-square bg-gray-50 overflow-hidden relative">
+                        <img src="${item.image}" alt="${item.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                    </div>
+                    <div class="p-3.5 bg-white">
+                        <h4 class="text-xs font-semibold text-gray-900 truncate">${item.title}</h4>
+                        <p class="text-[11px] text-gray-500 mt-1 line-clamp-2">${item.desc}</p>
+                    </div>
+                </div>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        function handleGalleryUpload(e) {
+            e.preventDefault();
+            const title = document.getElementById('gal-title').value;
+            const desc = document.getElementById('gal-desc').value;
+
+            const newItem = {
+                id: 'gal-' + Date.now(),
+                title, desc,
+                image: tempGalImg || 'https://images.unsplash.com/photo-1512374382149-233c42b6a83b?auto=format&fit=crop&w=600&q=80'
+            };
+
+            galleryUmum.unshift(newItem);
+            saveToStorage(STORAGE_KEY_GALLERY, galleryUmum);
+            renderGallery();
+
+            document.getElementById('upload-gallery-form').reset();
+            document.getElementById('gal-image-placeholder').classList.remove('hidden');
+            document.getElementById('gal-image-preview-container').classList.add('hidden');
+            tempGalImg = '';
+
+            showToast('Foto galeri berhasil diupload!');
+            switchPage('gallery');
+        }
+
+        function previewGalleryImage(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    tempGalImg = event.target.result;
+                    document.getElementById('gal-image-preview').src = tempGalImg;
+                    document.getElementById('gal-image-name').textContent = file.name;
+                    document.getElementById('gal-image-placeholder').classList.add('hidden');
+                    document.getElementById('gal-image-preview-container').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        /* ===================== MODAL GALLERY ===================== */
+        function showGalleryModal(id) {
+            const g = galleryUmum.find(x => x.id === id);
+            if (!g) return;
+
+            currentModalGalleryId = id;
+            document.getElementById('modal-gal-img').src = g.image;
+            document.getElementById('modal-gal-title').textContent = g.title;
+            document.getElementById('modal-gal-desc').textContent = g.desc || 'Tidak ada deskripsi.';
+
+            document.getElementById('gallery-modal').classList.add('modal-visible');
+            lucide.createIcons();
+        }
+        function closeGalleryModal() {
+            document.getElementById('gallery-modal').classList.remove('modal-visible');
+            currentModalGalleryId = null;
+        }
+        function deleteGalleryItem() {
+            if (!currentModalGalleryId) return;
+            if (!confirm('Yakin ingin menghapus foto ini?')) return;
+
+            galleryUmum = galleryUmum.filter(g => g.id !== currentModalGalleryId);
+            saveToStorage(STORAGE_KEY_GALLERY, galleryUmum);
+            renderGallery();
+            closeGalleryModal();
+            showToast('Foto gallery berhasil dihapus.');
+        }
+
+        /* ===================== TOAST ===================== */
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'bg-gray-900 text-white text-sm px-4 py-3 rounded-xl shadow-xl flex items-center gap-2 transform transition-all duration-300 translate-y-2 opacity-0 pointer-events-auto border border-gray-800';
+            toast.innerHTML = `
+                <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
+                <span>${message}</span>`;
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
